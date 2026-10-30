@@ -1,0 +1,1666 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>时间回溯 · Time Rewind</title>
+<style>
+  :root {
+    --green: #4ade80; --blue: #60a5fa; --purple: #c084fc;
+    --cyan: #22d3ee; --amber: #fbbf24; --red: #ef4444;
+    --main: #e2e8f0; --sub: #94a3b8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%; background: #05070f;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+    touch-action: none;
+  }
+  #wrap {
+    position: relative;
+    width: min(100vw, 133.33vh); height: min(75vw, 100vh);
+    max-width: 800px; max-height: 600px;
+    border-radius: 20px; overflow: hidden;
+    box-shadow: 0 0 80px rgba(96, 165, 250, 0.18), 0 0 160px rgba(192, 132, 252, 0.08),
+                0 30px 60px rgba(0,0,0,0.7), inset 0 0 0 1px rgba(148, 163, 184, 0.08);
+  }
+  canvas { width: 100%; height: 100%; display: block; }
+
+  .overlay {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 30% 20%, rgba(30, 58, 138, 0.35), transparent 60%),
+                radial-gradient(circle at 70% 80%, rgba(120, 53, 200, 0.28), transparent 60%),
+                rgba(5, 7, 15, 0.92);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--main); z-index: 10;
+    animation: fadeIn 0.35s ease-out;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+  .hidden { display: none !important; }
+
+  .menu-title {
+    font-size: 64px; font-weight: 900; margin-bottom: 6px; letter-spacing: 8px;
+    background: linear-gradient(135deg, #4ade80 0%, #22d3ee 45%, #c084fc 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 30px rgba(74, 222, 128, 0.4)) drop-shadow(0 0 60px rgba(192, 132, 252, 0.2));
+    animation: titleFloat 4s infinite ease-in-out;
+  }
+  @keyframes titleFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  .menu-divider {
+    width: 220px; height: 2px; margin: 12px 0 14px; border-radius: 2px;
+    background: linear-gradient(90deg, transparent, rgba(74,222,128,0.6), rgba(192,132,252,0.6), transparent);
+  }
+  .menu-sub { color: var(--sub); margin-bottom: 38px; font-size: 14px; letter-spacing: 6px; text-transform: uppercase; }
+  .menu-buttons { display: flex; flex-direction: column; gap: 4px; }
+
+  .btn {
+    padding: 14px 48px; font-size: 16px; font-weight: 600;
+    border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 14px;
+    cursor: pointer; margin: 5px; min-width: 230px; letter-spacing: 2px;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: rgba(30, 41, 59, 0.5); color: var(--main);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  .btn:hover { background: rgba(51, 65, 85, 0.75); transform: translateY(-2px) scale(1.02); border-color: rgba(148, 163, 184, 0.35); box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
+  .btn.primary {
+    background: linear-gradient(135deg, #4ade80, #22c55e); color: #052e16; border: none;
+    box-shadow: 0 0 24px rgba(74, 222, 128, 0.35), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+  .btn.primary:hover { background: linear-gradient(135deg, #86efac, #4ade80); box-shadow: 0 0 40px rgba(74, 222, 128, 0.6); }
+  .btn.danger { background: rgba(220, 38, 38, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); }
+  .btn.danger:hover { background: rgba(220, 38, 38, 0.4); color: #fff; }
+
+  #tutorial .panel {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+    border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 20px;
+    padding: 22px 32px; max-width: 700px; line-height: 1.6; font-size: 13px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  #tutorial h2 {
+    background: linear-gradient(135deg, #60a5fa, #c084fc);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 12px; font-size: 22px; text-align: center; letter-spacing: 2px;
+  }
+  #tutorial p { margin-bottom: 6px; color: #cbd5e1; }
+  #tutorial .key {
+    display: inline-block; background: rgba(74, 222, 128, 0.12); border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 6px; padding: 1px 9px; font-family: monospace; font-size: 12px;
+    color: var(--green); margin: 0 3px;
+  }
+  #tutorial .grid-mech {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5px 20px; margin-top: 10px;
+    font-size: 12px; background: rgba(15, 23, 42, 0.5); padding: 10px 14px; border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.08);
+  }
+  #tutorial .mech { color: var(--sub); }
+  #tutorial .mech b { color: var(--purple); font-weight: 600; }
+  .warn { color: #fca5a5; font-weight: 600; }
+
+  #levelSelect h2 {
+    font-size: 32px; margin-bottom: 24px;
+    background: linear-gradient(135deg, #c084fc, #60a5fa);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 3px;
+  }
+  .level-grid { display: grid; grid-template-columns: repeat(5, 84px); gap: 14px; margin-bottom: 28px; }
+  .level-btn {
+    width: 84px; height: 84px; border-radius: 16px;
+    border: 2px solid rgba(51, 65, 85, 0.8);
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.9));
+    color: var(--sub); font-size: 22px; font-weight: 800;
+    cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+  }
+  .level-btn.unlocked {
+    border-color: rgba(74, 222, 128, 0.5); color: var(--green);
+    background: linear-gradient(180deg, rgba(5, 46, 22, 0.8), rgba(2, 20, 10, 0.9));
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.15);
+  }
+  .level-btn.unlocked:hover {
+    background: linear-gradient(180deg, rgba(20, 83, 45, 0.95), rgba(5, 46, 22, 0.95));
+    transform: scale(1.08) translateY(-3px);
+    box-shadow: 0 0 30px rgba(74, 222, 128, 0.5);
+  }
+  .level-btn.locked { cursor: not-allowed; opacity: 0.35; }
+  .level-btn span { font-size: 10px; font-weight: 400; margin-top: 4px; opacity: 0.75; }
+  .level-btn .stars {
+    position: absolute; top: 4px; right: 6px;
+    font-size: 10px; color: var(--amber); letter-spacing: -1px;
+  }
+
+  #hud {
+    position: absolute; top: 14px; left: 18px; right: 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--sub); font-size: 12px; pointer-events: none;
+    font-weight: 600; z-index: 5; letter-spacing: 0.3px;
+    gap: 6px;
+  }
+  #hud .hud-item {
+    background: rgba(15, 23, 42, 0.78); padding: 5px 10px; border-radius: 18px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    display: flex; align-items: center; gap: 6px;
+    white-space: nowrap;
+  }
+  #hud .hud-dots { display: flex; gap: 3px; }
+  #hud .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(148, 163, 184, 0.25);
+    transition: all 0.25s;
+  }
+  #hud .dot.on-blue { background: var(--blue); box-shadow: 0 0 6px var(--blue); }
+  #hud .dot.on-amber { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  #hud .dot.on-red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  #hud #levelText { color: var(--purple); font-weight: 700; }
+  #hud #timeText { color: var(--cyan); font-family: monospace; }
+  #hud #fragmentText { color: var(--amber); }
+  #hud #freezeText { color: var(--cyan); }
+  #hud #freezeText.off { color: rgba(148, 163, 184, 0.4); }
+
+  #hint {
+    position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+    color: #cbd5e1; font-size: 12px; pointer-events: none; white-space: nowrap; z-index: 5;
+    background: rgba(15, 23, 42, 0.7); padding: 5px 16px; border-radius: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    backdrop-filter: blur(6px);
+  }
+  #btnPause {
+    pointer-events: auto; background: rgba(15, 23, 42, 0.78);
+    border: 1px solid rgba(148, 163, 184, 0.18); color: var(--main);
+    width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  #btnPause:hover { transform: scale(1.1) rotate(90deg); border-color: var(--blue); }
+
+  #touch {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 34%; display: none;
+    justify-content: space-between; padding: 0 24px 24px; align-items: flex-end;
+    pointer-events: none; z-index: 5;
+  }
+  #touch .side { display: flex; gap: 12px; pointer-events: auto; }
+  #touch button {
+    width: 64px; height: 64px; border-radius: 50%;
+    border: 1px solid rgba(148, 163, 184, 0.2); background: rgba(30, 41, 59, 0.55);
+    color: var(--main); font-size: 18px; backdrop-filter: blur(10px);
+    user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+    transition: all 0.12s;
+  }
+  #touch button:active { background: rgba(74, 222, 128, 0.35); transform: scale(0.92); }
+  @media (pointer: coarse) { #touch { display: flex; } }
+
+  #gameClear h2 {
+    font-size: 52px; margin-bottom: 6px;
+    background: linear-gradient(135deg, #4ade80, #22d3ee);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 6px; filter: drop-shadow(0 0 30px rgba(74, 222, 128, 0.5));
+  }
+  #gameClear .time { font-size: 15px; color: var(--sub); margin-bottom: 10px; }
+  #gameClear .time b { color: var(--cyan); font-size: 20px; }
+  #gameClear .stars-big {
+    font-size: 46px; letter-spacing: 12px; margin-bottom: 16px;
+    color: var(--amber);
+    filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.6));
+  }
+  #gameClear .stars-big .off { color: rgba(148, 163, 184, 0.2); filter: none; }
+  #gameClear .auto-hint { font-size: 13px; color: var(--sub); margin-top: 12px; opacity: 0.75; }
+
+  #allClear h2 {
+    font-size: 52px; margin-bottom: 12px;
+    background: linear-gradient(135deg, #c084fc, #fbbf24);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 6px;
+  }
+  #allClear .sub { color: var(--sub); margin: 8px 0 30px; font-size: 15px; letter-spacing: 3px; }
+
+  .pause-title, .exit-title {
+    font-size: 40px; margin-bottom: 24px;
+    background: linear-gradient(135deg, #60a5fa, #c084fc);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    letter-spacing: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="cv" width="800" height="600"></canvas>
+
+  <div id="hud">
+    <span class="hud-item" id="levelText">第 1 关</span>
+    <span class="hud-item" id="timeText">30.0s / 30s</span>
+    <span class="hud-item">
+      幽灵<span class="hud-dots" id="ghostDots"></span>
+    </span>
+    <span class="hud-item">
+      回溯<span class="hud-dots" id="rewindDots"></span>
+    </span>
+    <span class="hud-item" id="fragmentText">💎 0/3</span>
+    <span class="hud-item" id="freezeText">❄ 1</span>
+    <button id="btnPause">❚❚</button>
+  </div>
+  <div id="hint"></div>
+
+  <div id="touch">
+    <div class="side">
+      <button id="btnLeft">←</button>
+      <button id="btnRight">→</button>
+    </div>
+    <div class="side">
+      <button id="btnFreeze">❄</button>
+      <button id="btnRewind">R</button>
+      <button id="btnJump">跳</button>
+    </div>
+  </div>
+
+  <div id="menu" class="overlay">
+    <h1 class="menu-title">时间回溯</h1>
+    <div class="menu-divider"></div>
+    <p class="menu-sub">Time Rewind</p>
+    <div class="menu-buttons">
+      <button class="btn primary" id="btnStart">开 始 游 戏</button>
+      <button class="btn" id="btnTutorial">游 戏 说 明</button>
+      <button class="btn" id="btnSelectLevel">选 择 关 卡</button>
+      <button class="btn danger" id="btnExit">退 出 游 戏</button>
+    </div>
+  </div>
+
+  <div id="tutorial" class="overlay hidden">
+    <div class="panel">
+      <h2>游 戏 说 明</h2>
+      <p>你是一个可以<span style="color:var(--green); font-weight:600">时间回溯</span>的小方块。每次死亡或按 R，时间倒流，过去的你变成<span style="color:var(--blue); font-weight:600">幽灵</span>循环重放动作。</p>
+      <p class="warn">⚠ 每关有幽灵上限、回溯上限、时间限制。幽灵会老死，碰到激光或巡逻兵也会消失！</p>
+      <p><strong style="color:var(--purple)">操作：</strong>移动 <span class="key">←</span><span class="key">→</span>　跳跃 <span class="key">空格</span>　回溯 <span class="key">R</span>　冻结 <span class="key">F</span>　暂停 <span class="key">Esc</span></p>
+      <div class="grid-mech">
+        <div class="mech"><b>黄色按钮</b> 踩住激活机关</div>
+        <div class="mech"><b>蓝色能量门</b> 需按钮激活</div>
+        <div class="mech"><b>红色激光</b> 碰到即回溯</div>
+        <div class="mech"><b>脉冲激光</b> 周期性开关</div>
+        <div class="mech"><b>红色巡逻兵</b> 碰到即回溯</div>
+        <div class="mech"><b>金色钥匙</b> 捡起开所有锁</div>
+        <div class="mech"><b>紫色传送门</b> 双向穿梭</div>
+        <div class="mech"><b>绿色弹跳板</b> 二段跳高度</div>
+        <div class="mech"><b>可推箱子</b> 推着走，压按钮</div>
+        <div class="mech"><b>时光碎片</b> 每关3个，影响星级</div>
+        <div class="mech"><b>时间冻结</b> 按 F 冻住机关 3 秒</div>
+        <div class="mech"><b>幽灵寿命</b> 20 秒后消失</div>
+      </div>
+      <p style="margin-top:10px; color:var(--purple); text-align:center; letter-spacing:1px;">3 星条件：少回溯 + 快通关 + 集齐碎片</p>
+    </div>
+    <button class="btn" id="btnBackMenu" style="margin-top:16px;">返 回 主 菜 单</button>
+  </div>
+
+  <div id="levelSelect" class="overlay hidden">
+    <h2>选 择 关 卡</h2>
+    <div class="level-grid" id="levelGrid"></div>
+    <button class="btn" id="btnBackMenu2">返 回 主 菜 单</button>
+  </div>
+
+  <div id="pauseMenu" class="overlay hidden">
+    <h2 class="pause-title">游 戏 暂 停</h2>
+    <button class="btn primary" id="btnResume">继 续 游 戏</button>
+    <button class="btn" id="btnRestart">重 玩 本 关</button>
+    <button class="btn" id="btnBackMenu3">返 回 主 菜 单</button>
+  </div>
+
+  <div id="gameClear" class="overlay hidden">
+    <h2>过 关</h2>
+    <div class="stars-big" id="clearStars"></div>
+    <div class="time" id="clearTimeText"></div>
+    <button class="btn primary" id="btnNextLevel">立 即 进 入 下 一 关</button>
+    <button class="btn" id="btnReplay">重 玩 本 关</button>
+    <button class="btn" id="btnBackMenu4">返 回 主 菜 单</button>
+    <div class="auto-hint" id="autoHint">3 秒后自动进入下一关...</div>
+  </div>
+
+  <div id="allClear" class="overlay hidden">
+    <h2>全 部 通 关</h2>
+    <p class="sub" id="allClearSub"></p>
+    <button class="btn primary" id="btnBackMenu5">返 回 主 菜 单</button>
+  </div>
+
+  <div id="exitScreen" class="overlay hidden">
+    <h2 class="exit-title">感 谢 游 玩</h2>
+    <p style="color: var(--sub); margin: 12px 0 30px; letter-spacing: 3px;">时间回溯 · Time Rewind</p>
+    <button class="btn" id="btnBackMenu6">返 回 主 菜 单</button>
+  </div>
+</div>
+
+<script>
+/* ========================= 基础常量 ========================= */
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const W = 800, H = 600;
+const GRAVITY = 0.7, MOVE_SPEED = 4.5, JUMP_POWER = -14;
+const BOUNCE_POWER = -19, MAX_FALL = 20, MAX_HISTORY = 300, REWIND_FRAMES = 120;
+const GHOST_LIFE = 1200;
+
+const player = { x:60, y:480, w:24, h:32, vx:0, vy:0, onGround:false, facing:1, trail:[], teleportCooldown:0 };
+const keys = {};
+let levelIndex = 0, level = null, history = [], ghosts = [];
+let rewindFlash = 0, screenShake = 0, particles = [], fireworks = [];
+let state = 'menu', clearTimer = 0, jumpHeld = false;
+let startTime = 0, elapsedTime = 0, unlockedLevels = 1, autoNextTimer = null;
+let bgStars = [], bgAurora = [], bgOffset = 0;
+let rewindsUsed = 0, ghostLimit = 3, rewindLimit = 5, warnFlash = 0, ghostSwapFlash = 0;
+let timeLimit = 45, timeLeft = 45;
+let fragmentsCollected = 0, freezeLeft = 1, freezeActive = 0;
+const levelStars = {};
+
+/* 音效 */
+let audioCtx = null;
+function sfx(freq, dur = 0.1, type = 'sine', vol = 0.08) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + dur);
+  } catch(e) {}
+}
+
+try {
+  const s = localStorage.getItem('timeRewindProgress');
+  if (s) unlockedLevels = parseInt(s);
+  const ss = localStorage.getItem('timeRewindStars');
+  if (ss) Object.assign(levelStars, JSON.parse(ss));
+} catch(e) {}
+
+for (let i = 0; i < 70; i++) {
+  bgStars.push({ x:Math.random()*W, y:Math.random()*H, r:Math.random()*1.6+0.4,
+    speed:Math.random()*0.25+0.08, alpha:Math.random()*0.6+0.15, phase:Math.random()*Math.PI*2 });
+}
+for (let i = 0; i < 4; i++) {
+  bgAurora.push({ x:Math.random()*W, y:Math.random()*H, r:Math.random()*200+180,
+    hue:[160,200,280,320][i], phase:Math.random()*Math.PI*2, speed:0.15+Math.random()*0.15 });
+}
+
+/* ========================= 20 关 ========================= */
+const LEVELS = [
+  // 1
+  { spawn:{x:60,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    buttons:[{x:280,y:532,w:80,h:8,active:false}],
+    doors:[{x:500,y:200,w:24,h:340,open:false,linkedButton:0}],
+    goal:{x:700,y:480,w:40,h:60},
+    fragments:[{x:200,y:400,w:20,h:20,taken:false},{x:450,y:200,w:20,h:20,taken:false},{x:680,y:380,w:20,h:20,taken:false}],
+    crates:[{x:240,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
+    ghostLimit:3, rewindLimit:5, bestRewinds:1, timeLimit:35, freezeCount:1,
+    hint:'把木箱推到按钮上，或踩按钮后回溯' },
+
+  // 2
+  { spawn:{x:60,y:480},
+    platforms:[{x:0,y:540,w:240,h:60},{x:560,y:540,w:240,h:60}],
+    movingPlatforms:[{x:260,y:480,w:100,h:20,x1:260,y1:480,x2:460,y2:480,speed:0.012,t:0,dx:0,dy:0}],
+    buttons:[{x:100,y:532,w:60,h:8,active:false}],
+    doors:[{x:620,y:200,w:24,h:340,open:false,linkedButton:0}],
+    goal:{x:740,y:480,w:40,h:60},
+    fragments:[{x:150,y:380,w:20,h:20,taken:false},{x:400,y:380,w:20,h:20,taken:false},{x:700,y:380,w:20,h:20,taken:false}],
+    crates:[{x:130,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
+    ghostLimit:3, rewindLimit:6, bestRewinds:1, timeLimit:40, freezeCount:1,
+    hint:'箱子推上按钮，然后骑移动平台过坑' },
+
+  // 3
+  { spawn:{x:60,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    buttons:[{x:120,y:532,w:60,h:8,active:false},{x:380,y:532,w:60,h:8,active:false}],
+    doors:[{x:260,y:200,w:24,h:340,open:false,linkedButton:0},
+           {x:540,y:200,w:24,h:340,open:false,linkedButton:1}],
+    goal:{x:720,y:480,w:40,h:60},
+    fragments:[{x:340,y:300,w:20,h:20,taken:false},{x:500,y:300,w:20,h:20,taken:false},{x:680,y:400,w:20,h:20,taken:false}],
+    crates:[{x:200,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
+    ghostLimit:2, rewindLimit:4, bestRewinds:2, timeLimit:35, freezeCount:1,
+    hint:'箱子或幽灵踩一个按钮，另一个用幽灵' },
+
+  // 4
+  { spawn:{x:60,y:480},
+    platforms:[{x:0,y:540,w:800,h:60},{x:400,y:380,w:160,h:20}],
+    bouncePads:[{x:220,y:528,w:80,h:12}],
+    buttons:[{x:460,y:372,w:60,h:8,active:false}],
+    doors:[{x:660,y:200,w:24,h:340,open:false,linkedButton:0}],
+    goal:{x:740,y:480,w:40,h:60},
+    fragments:[{x:300,y:300,w:20,h:20,taken:false},{x:470,y:300,w:20,h:20,taken:false},{x:680,y:300,w:20,h:20,taken:false}],
+    crates:[{x:480,y:348,w:32,h:32,vx:0,vy:0,onGround:false}],
+    ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:32, freezeCount:1,
+    hint:'弹跳板上高台，把箱子推上按钮' },
+
+  // 5
+  { spawn:{x:60,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    wallPlatforms:[{x:400,y:0,w:24,h:540}],
+    portals:[{x:200,y:480,w:40,h:60,exit:1},{x:620,y:480,w:40,h:60,exit:0}],
+    buttons:[{x:100,y:532,w:60,h:8,active:false}],
+    doors:[{x:700,y:200,w:24,h:340,open:false,linkedButton:0}],
+    goal:{x:760,y:480,w:40,h:60},
+    fragments:[{x:300,y:300,w:20,h:20,taken:false},{x:500,y:400,w:20,h:20,taken:false},{x:720,y:300,w:20,h:20,taken:false}],
+    ghostLimit:2, rewindLimit:3, bestRewinds:1, timeLimit:30, freezeCount:1,
+    hint:'墙挡住去路，按下按钮回溯后从传送门过去' },
+
+  // 6
+  { spawn:{x:60,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    keys:[{x:240,y:500,w:24,h:24,taken:false}],
+    locks:[{x:440,y:200,w:24,h:340,open:false}],
+    buttons:[{x:600,y:532,w:60,h:8,active:false}],
+    doors:[{x:700,y:200,w:24,h:340,open:false,linkedButton:0}],
+    goal:{x:760,y:480,w:40,h:60},
+    fragments:[{x:300,y:400,w:20,h:20,taken:false},{x:500,y:400,w:20,h:20,taken:false},{x:650,y:400,w:20,h:20,taken:false}],
+    crates:[{x:340,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
+    ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:32, freezeCount:1,
+    hint:'钥匙开锁，箱子或幽灵踩按钮开门' },
+
+  // 7
+  { spawn:{x:60,y:480},
+    platforms:[{x:0,y:540,w:800,h:60},{x:400,y:320,w:120,h:20}],
+    movingPlatforms:[{x:240,y:480,w:100,h:20,x1:240,y1:480,x2:240,y2:340,speed:0.008,t:0,dx:0,dy:0}],
+    buttons:[{x:430,y:312,w:60,h:8,active:false}],
+    doors:[{x:620,y:200,w:24,h:340,open:false,linkedButton:0}],
+    goal:{x:720,y:480,w:40,h:60},
+    fragments:[{x:300,y:300,w:20,h:20,taken:false},{x:460,y:240,w:20,h:20,taken:false},{x:650,y:300,w:20,h:20,taken:false}],
+    crates:[{x:440,y:288,w:32,h:32,vx:0,vy:0,onGround:false}],
+    ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:32, freezeCount:2,
+    hint:'乘电梯上去推箱子到按钮上' },
+
+  // 8
+  { spawn:{x:60,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    patrollers:[{x:300,y:500,w:30,h:40,x1:300,y1:500,x2:500,y2:500,speed:0.010,t:0}],
+    spikes:[{x:200,y:320,w:50,h:220,linkedButton:-1,retracted:false,pulse:180,phase:0}],
+    buttons:[{x:100,y:532,w:60,h:8,active:false}],
+    doors:[{x:620,y:200,w:24,h:340,open:false,linkedButton:0}],
+    goal:{x:740,y:480,w:40,h:60},
+    fragments:[{x:350,y:400,w:20,h:20,taken:false},{x:500,y:300,w:20,h:20,taken:false},{x:700,y:400,w:20,h:20,taken:false}],
+    ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:32, freezeCount:2,
+    hint:'脉冲激光会周期性开关，抓时机穿过' },
+
+  // 9
+  { spawn:{x:60,y:480},
+    platforms:[{x:0,y:540,w:200,h:60},{x:560,y:540,w:240,h:60}],
+    movingPlatforms:[{x:240,y:480,w:100,h:20,x1:240,y1:480,x2:440,y2:480,speed:0.012,t:0,dx:0,dy:0}],
+    patrollers:[{x:620,y:500,w:30,h:40,x1:620,y1:500,x2:740,y2:500,speed:0.012,t:0}],
+    keys:[{x:100,y:500,w:24,h:24,taken:false}],
+    locks:[{x:500,y:200,w:24,h:340,open:false}],
+    goal:{x:740,y:480,w:40,h:60},
+    fragments:[{x:150,y:400,w:20,h:20,taken:false},{x:400,y:400,w:20,h:20,taken:false},{x:700,y:300,w:20,h:20,taken:false}],
+    ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:35, freezeCount:2,
+    hint:'捡钥匙开锁，骑平台过坑，避开巡逻兵' },
+
+  // 10
+  { spawn:{x:40,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    patrollers:[{x:200,y:500,w:30,h:40,x1:200,y1:500,x2:340,y2:500,speed:0.012,t:0}],
+    buttons:[{x:80,y:532,w:50,h:8,active:false},
+             {x:380,y:532,w:50,h:8,active:false},
+             {x:560,y:532,w:50,h:8,active:false}],
+    doors:[{x:140,y:200,w:24,h:340,open:false,linkedButton:0},
+           {x:640,y:200,w:24,h:340,open:false,linkedButton:2}],
+    spikes:[{x:460,y:320,w:60,h:220,linkedButton:1,retracted:false}],
+    goal:{x:740,y:480,w:40,h:60},
+    fragments:[{x:300,y:400,w:20,h:20,taken:false},{x:500,y:400,w:20,h:20,taken:false},{x:700,y:400,w:20,h:20,taken:false}],
+    crates:[{x:600,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
+    ghostLimit:3, rewindLimit:4, bestRewinds:3, timeLimit:38, freezeCount:2,
+    hint:'三幽灵分别开门/关激光，箱子可帮忙' },
+
+  // 11（简化：无碎片/箱子，保留核心机制）
+  { spawn:{x:30,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    patrollers:[{x:180,y:500,w:30,h:40,x1:180,y1:500,x2:300,y2:500,speed:0.014,t:0},
+                {x:400,y:500,w:30,h:40,x1:400,y1:500,x2:520,y2:500,speed:0.014,t:0.5}],
+    buttons:[{x:60,y:532,w:30,h:8,active:false},
+             {x:130,y:532,w:30,h:8,active:false},
+             {x:560,y:532,w:30,h:8,active:false},
+             {x:640,y:532,w:30,h:8,active:false}],
+    doors:[{x:100,y:200,w:24,h:340,open:false,linkedButton:0},
+           {x:260,y:200,w:24,h:340,open:false,linkedButton:1},
+           {x:700,y:200,w:24,h:340,open:false,linkedButton:3}],
+    spikes:[{x:440,y:320,w:60,h:220,linkedButton:2,retracted:false}],
+    goal:{x:760,y:480,w:40,h:60},
+    ghostLimit:4, rewindLimit:5, bestRewinds:4, timeLimit:40, freezeCount:2,
+    hint:'4 幽灵依次：门0、门1、关激光、门2' },
+
+  // 12
+  { spawn:{x:60,y:480},
+    platforms:[{x:0,y:540,w:800,h:60},{x:320,y:380,w:120,h:20}],
+    bouncePads:[{x:160,y:528,w:60,h:12}],
+    patrollers:[{x:500,y:500,w:30,h:40,x1:500,y1:500,x2:660,y2:500,speed:0.016,t:0}],
+    buttons:[{x:360,y:372,w:60,h:8,active:false}],
+    spikes:[{x:520,y:320,w:120,h:220,linkedButton:0,retracted:false}],
+    goal:{x:740,y:480,w:40,h:60},
+    ghostLimit:2, rewindLimit:3, bestRewinds:1, timeLimit:26, freezeCount:1,
+    hint:'幽灵上限 2、回溯上限 3、时间只有 26 秒！' },
+
+  // 13
+  { spawn:{x:40,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    keys:[{x:60,y:500,w:24,h:24,taken:false}],
+    locks:[{x:130,y:200,w:24,h:340,open:false}],
+    patrollers:[{x:200,y:500,w:30,h:40,x1:200,y1:500,x2:340,y2:500,speed:0.015,t:0}],
+    buttons:[{x:400,y:532,w:40,h:8,active:false},
+             {x:520,y:532,w:40,h:8,active:false},
+             {x:640,y:532,w:40,h:8,active:false}],
+    doors:[{x:700,y:200,w:24,h:340,open:false,linkedButton:2}],
+    spikes:[{x:460,y:320,w:40,h:220,linkedButton:0,retracted:false,pulse:140,phase:0},
+            {x:580,y:320,w:40,h:220,linkedButton:1,retracted:false}],
+    goal:{x:760,y:480,w:40,h:60},
+    ghostLimit:3, rewindLimit:4, bestRewinds:3, timeLimit:34, freezeCount:2,
+    hint:'钥匙开锁，脉冲激光 + 按钮激光混合' },
+
+  // 14
+  { spawn:{x:60,y:480},
+    platforms:[{x:0,y:540,w:260,h:60},{x:420,y:540,w:80,h:60},{x:680,y:540,w:120,h:60}],
+    movingPlatforms:[{x:260,y:480,w:80,h:20,x1:260,y1:480,x2:340,y2:480,speed:0.020,t:0,dx:0,dy:0},
+                     {x:500,y:480,w:80,h:20,x1:500,y1:480,x2:580,y2:480,speed:0.020,t:0,dx:0,dy:0}],
+    patrollers:[{x:700,y:500,w:30,h:40,x1:700,y1:500,x2:780,y2:500,speed:0.018,t:0}],
+    buttons:[{x:100,y:532,w:50,h:8,active:false}],
+    spikes:[{x:680,y:320,w:60,h:220,linkedButton:0,retracted:false}],
+    goal:{x:740,y:480,w:40,h:60},
+    ghostLimit:2, rewindLimit:3, bestRewinds:1, timeLimit:26, freezeCount:1,
+    hint:'幽灵上限 2、回溯 3、时间 26 秒，骑快速平台' },
+
+  // 15
+  { spawn:{x:60,y:480},
+    platforms:[{x:0,y:540,w:800,h:60},{x:240,y:440,w:100,h:20},
+               {x:420,y:340,w:100,h:20},{x:600,y:240,w:120,h:20}],
+    bouncePads:[{x:100,y:528,w:60,h:12},{x:260,y:428,w:60,h:12},{x:440,y:328,w:60,h:12}],
+    patrollers:[{x:500,y:200,w:30,h:30,x1:500,y1:200,x2:700,y2:200,speed:0.018,t:0}],
+    buttons:[{x:640,y:232,w:60,h:8,active:false}],
+    doors:[{x:720,y:200,w:24,h:340,open:false,linkedButton:0}],
+    goal:{x:760,y:480,w:40,h:60},
+    ghostLimit:1, rewindLimit:4, bestRewinds:1, timeLimit:28, freezeCount:2,
+    hint:'幽灵上限只有 1！三连跳必须一次成功' },
+
+  // 16
+  { spawn:{x:40,y:480},
+    platforms:[{x:0,y:540,w:280,h:60},{x:440,y:540,w:120,h:60},{x:640,y:540,w:160,h:60}],
+    movingPlatforms:[{x:280,y:480,w:80,h:20,x1:280,y1:480,x2:360,y2:480,speed:0.018,t:0,dx:0,dy:0}],
+    patrollers:[{x:480,y:500,w:30,h:40,x1:480,y1:500,x2:540,y2:500,speed:0.018,t:0}],
+    buttons:[{x:80,y:532,w:50,h:8,active:false},{x:180,y:532,w:50,h:8,active:false}],
+    spikes:[{x:200,y:320,w:40,h:220,linkedButton:0,retracted:false},
+            {x:620,y:320,w:40,h:220,linkedButton:1,retracted:false}],
+    goal:{x:740,y:480,w:40,h:60},
+    ghostLimit:2, rewindLimit:3, bestRewinds:2, timeLimit:26, freezeCount:1,
+    hint:'幽灵上限 2、回溯 3、时间 26 秒！' },
+
+  // 17
+  { spawn:{x:60,y:480},
+    platforms:[{x:0,y:540,w:180,h:60},{x:260,y:480,w:70,h:20},{x:390,y:420,w:70,h:20},
+               {x:520,y:360,w:70,h:20},{x:650,y:300,w:70,h:20},{x:720,y:540,w:80,h:60}],
+    patrollers:[{x:400,y:380,w:30,h:30,x1:400,y1:380,x2:520,y2:380,speed:0.018,t:0}],
+    buttons:[{x:100,y:532,w:60,h:8,active:false}],
+    spikes:[{x:720,y:320,w:60,h:220,linkedButton:0,retracted:false,pulse:160,phase:0}],
+    goal:{x:740,y:480,w:40,h:60},
+    ghostLimit:2, rewindLimit:3, bestRewinds:1, timeLimit:26, freezeCount:2,
+    hint:'五连跳 + 脉冲激光 + 巡逻兵，时间 26 秒' },
+
+  // 18
+  { spawn:{x:10,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    keys:[{x:20,y:500,w:24,h:24,taken:false}],
+    locks:[{x:60,y:200,w:24,h:340,open:false}],
+    patrollers:[{x:180,y:500,w:30,h:40,x1:180,y1:500,x2:280,y2:500,speed:0.016,t:0},
+                {x:420,y:500,w:30,h:40,x1:420,y1:500,x2:520,y2:500,speed:0.016,t:0.5}],
+    buttons:[{x:100,y:532,w:26,h:8,active:false},
+             {x:140,y:532,w:26,h:8,active:false},
+             {x:340,y:532,w:26,h:8,active:false},
+             {x:570,y:532,w:26,h:8,active:false},
+             {x:610,y:532,w:26,h:8,active:false}],
+    doors:[{x:120,y:200,w:24,h:340,open:false,linkedButton:0},
+           {x:160,y:200,w:24,h:340,open:false,linkedButton:1},
+           {x:680,y:200,w:24,h:340,open:false,linkedButton:4}],
+    spikes:[{x:380,y:320,w:40,h:220,linkedButton:2,retracted:false},
+            {x:640,y:320,w:40,h:220,linkedButton:3,retracted:false,pulse:150,phase:60}],
+    goal:{x:740,y:480,w:40,h:60},
+    ghostLimit:3, rewindLimit:4, bestRewinds:4, timeLimit:34, freezeCount:2,
+    hint:'幽灵上限 3！5 按钮依次触发，混合脉冲激光' },
+
+  // 19
+  { spawn:{x:60,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
+    patrollers:[{x:200,y:500,w:30,h:40,x1:200,y1:500,x2:380,y2:500,speed:0.018,t:0}],
+    spikes:[{x:240,y:320,w:40,h:220,linkedButton:0,retracted:false,pulse:180,phase:0},
+            {x:420,y:320,w:40,h:220,linkedButton:1,retracted:false}],
+    buttons:[{x:60,y:532,w:50,h:8,active:false},{x:140,y:532,w:50,h:8,active:false}],
+    portals:[{x:560,y:460,w:40,h:60,exit:1},{x:100,y:200,w:40,h:60,exit:0}],
+    goal:{x:100,y:260,w:40,h:60},
+    ghostLimit:2, rewindLimit:3, bestRewinds:2, timeLimit:26, freezeCount:2,
+    hint:'幽灵上限 2、回溯 3、时间 26 秒！脉冲激光 + 巡逻' },
+
+  // 20
+  { spawn:{x:30,y:480},
+    platforms:[{x:0,y:540,w:800,h:60},{x:240,y:420,w:80,h:20}],
+    bouncePads:[{x:140,y:528,w:60,h:12}],
+    keys:[{x:60,y:500,w:24,h:24,taken:false}],
+    locks:[{x:110,y:200,w:24,h:340,open:false}],
+    patrollers:[{x:200,y:500,w:30,h:40,x1:200,y1:500,x2:300,y2:500,speed:0.018,t:0},
+                {x:400,y:500,w:30,h:40,x1:400,y1:500,x2:500,y2:500,speed:0.018,t:0.5},
+                {x:260,y:350,w:30,h:30,x1:260,y1:350,x2:380,y2:350,speed:0.016,t:0}],
+    buttons:[{x:260,y:412,w:40,h:8,active:false},
+             {x:380,y:532,w:36,h:8,active:false},
+             {x:450,y:532,w:36,h:8,active:false},
+             {x:540,y:532,w:36,h:8,active:false}],
+    spikes:[{x:340,y:320,w:26,h:220,linkedButton:0,retracted:false,pulse:140,phase:0},
+            {x:420,y:320,w:26,h:220,linkedButton:1,retracted:false},
+            {x:500,y:320,w:26,h:220,linkedButton:2,retracted:false,pulse:160,phase:40}],
+    doors:[{x:640,y:200,w:24,h:340,open:false,linkedButton:3}],
+    goal:{x:740,y:480,w:40,h:60},
+    ghostLimit:4, rewindLimit:5, bestRewinds:4, timeLimit:32, freezeCount:2,
+    hint:'终极：4 幽灵 + 3 激光 + 3 巡逻 + 时间 32 秒' }
+];
+
+/* ========================= 工具函数 ========================= */
+function rectsOverlap(a,b) {
+  return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y;
+}
+function roundRect(x,y,w,h,r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);
+  ctx.arcTo(x,y,x+w,y,r);
+  ctx.closePath();
+}
+function getSolids() {
+  const a = (level.platforms||[]).slice();
+  if (level.wallPlatforms) for (const w of level.wallPlatforms) a.push(w);
+  for (const d of (level.doors||[])) if (!d.open) a.push(d);
+  for (const l of (level.locks||[])) if (!l.open) a.push(l);
+  for (const mp of (level.movingPlatforms||[])) a.push(mp);
+  return a;
+}
+function updateMovingPlatforms() {
+  for (const mp of (level.movingPlatforms||[])) {
+    const px=mp.x, py=mp.y;
+    mp.t += mp.speed;
+    if (mp.t>=1){mp.t=1;mp.speed=-Math.abs(mp.speed);}
+    if (mp.t<=0){mp.t=0;mp.speed=Math.abs(mp.speed);}
+    mp.x = mp.x1+(mp.x2-mp.x1)*mp.t;
+    mp.y = mp.y1+(mp.y2-mp.y1)*mp.t;
+    mp.dx = mp.x-px; mp.dy = mp.y-py;
+  }
+}
+function carryPlayerOnPlatforms() {
+  for (const mp of (level.movingPlatforms||[])) {
+    const wasOn = player.onGround &&
+                  Math.abs(player.y+player.h-mp.y)<4 &&
+                  player.x+player.w>mp.x+1 && player.x<mp.x+mp.w-1;
+    if (wasOn) { player.x+=mp.dx||0; player.y+=mp.dy||0; }
+  }
+}
+function moveAndCollide() {
+  const solids = getSolids();
+  player.x += player.vx;
+  for (const s of solids) {
+    if (rectsOverlap(player,s)) {
+      if (player.vx>0) player.x=s.x-player.w;
+      else if (player.vx<0) player.x=s.x+s.w;
+      player.vx=0;
+    }
+  }
+  player.vy += GRAVITY;
+  if (player.vy>MAX_FALL) player.vy=MAX_FALL;
+  player.y += player.vy;
+  player.onGround = false;
+  for (const s of solids) {
+    if (rectsOverlap(player,s)) {
+      if (player.vy>0) { player.y=s.y-player.h; player.vy=0; player.onGround=true; }
+      else if (player.vy<0) { player.y=s.y+s.h; player.vy=0; }
+    }
+  }
+}
+/* 箱子物理 */
+function pushCrates() {
+  for (const c of (level.crates||[])) {
+    if (!rectsOverlap(player,c)) continue;
+    // 玩家水平推进箱子
+    if (player.vx > 0) {
+      const test = {x:c.x+player.vx, y:c.y, w:c.w, h:c.h};
+      let blocked = false;
+      for (const s of getSolids()) if (rectsOverlap(test,s)) { blocked = true; break; }
+      for (const c2 of (level.crates||[])) if (c2!==c && rectsOverlap(test,c2)) { blocked=true; break; }
+      if (!blocked) c.x += player.vx;
+      player.x = c.x - player.w;
+    } else if (player.vx < 0) {
+      const test = {x:c.x+player.vx, y:c.y, w:c.w, h:c.h};
+      let blocked = false;
+      for (const s of getSolids()) if (rectsOverlap(test,s)) { blocked = true; break; }
+      for (const c2 of (level.crates||[])) if (c2!==c && rectsOverlap(test,c2)) { blocked=true; break; }
+      if (!blocked) c.x += player.vx;
+      player.x = c.x + c.w;
+    }
+  }
+}
+function updateCrates() {
+  for (const c of (level.crates||[])) {
+    c.vy += GRAVITY;
+    if (c.vy > MAX_FALL) c.vy = MAX_FALL;
+    c.y += c.vy;
+    c.onGround = false;
+    const solids = getSolids();
+    for (const s of solids) {
+      if (rectsOverlap(c,s)) {
+        if (c.vy > 0) { c.y = s.y - c.h; c.vy = 0; c.onGround = true; }
+        else if (c.vy < 0) { c.y = s.y + s.h; c.vy = 0; }
+      }
+    }
+    for (const c2 of (level.crates||[])) {
+      if (c===c2) continue;
+      if (rectsOverlap(c,c2)) {
+        if (c.vy > 0) { c.y = c2.y - c.h; c.vy = 0; c.onGround = true; }
+        else if (c.vy < 0) { c.y = c2.y + c2.h; c.vy = 0; }
+      }
+    }
+    // 玩家踩在箱子上
+    if (player.onGround && Math.abs(player.y+player.h-c.y)<4 &&
+        player.x+player.w>c.x+2 && player.x<c.x+c.w-2) {
+      player.y = c.y - player.h;
+    }
+  }
+}
+function recordHistory() {
+  history.push({x:player.x,y:player.y,vx:player.vx,vy:player.vy,onGround:player.onGround,facing:player.facing});
+  if (history.length>MAX_HISTORY) history.shift();
+}
+function updateGhosts() {
+  for (const g of ghosts) {
+    g.index = (g.index+1)%g.frames.length;
+    const f = g.frames[g.index];
+    g.x=f.x; g.y=f.y; g.facing=f.facing;
+    g.glitched = Math.random()<0.05;
+  }
+  for (let i = ghosts.length-1; i >= 0; i--) {
+    const g = ghosts[i];
+    g.life = (g.life === undefined) ? GHOST_LIFE : g.life - 1;
+    let dead = false;
+    for (const s of (level.spikes||[])) {
+      if (s.retracted) continue;
+      let blocked = false;
+      for (const c of (level.crates||[])) {
+        if (rectsOverlap(c, s)) { blocked = true; break; }
+      }
+      if (blocked) continue;
+      if (rectsOverlap(g, s)) { dead = true; break; }
+    }
+    if (!dead) {
+      for (const p of (level.patrollers||[])) {
+        if (rectsOverlap(g, p)) { dead = true; break; }
+      }
+    }
+    if (dead || g.life <= 0) {
+      for (let k = 0; k < 15; k++) {
+        particles.push({
+          x: g.x+g.w/2, y: g.y+g.h/2,
+          vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
+          life: 1, color: '#93c5fd', size: 3
+        });
+      }
+      ghosts.splice(i, 1);
+      sfx(220, 0.2, 'sawtooth', 0.06);
+    }
+  }
+}
+function updatePatrollers() {
+  for (const p of (level.patrollers||[])) {
+    p.t += p.speed;
+    if (p.t>=1){p.t=1;p.speed=-Math.abs(p.speed);}
+    if (p.t<=0){p.t=0;p.speed=Math.abs(p.speed);}
+    p.x = p.x1+(p.x2-p.x1)*p.t;
+    p.y = p.y1+(p.y2-p.y1)*p.t;
+  }
+}
+function checkPatrollers() {
+  for (const p of (level.patrollers||[])) {
+    if (rectsOverlap(player,p)) { rewind(); return; }
+  }
+}
+function updateButtons() {
+  for (const b of (level.buttons||[])) {
+    b.active = false;
+    if (rectsOverlap(player,b)) b.active = true;
+    for (const g of ghosts) if (rectsOverlap(g,b)) { b.active=true; break; }
+    for (const c of (level.crates||[])) if (rectsOverlap(c,b)) { b.active=true; break; }
+  }
+  for (const d of (level.doors||[])) {
+    if (d.linkedButton !== undefined) d.open = level.buttons[d.linkedButton].active;
+  }
+  for (const s of (level.spikes||[])) {
+    if (s.pulse && freezeActive <= 0) {
+      const t = (Date.now()/16.67 + (s.phase||0)) % s.pulse;
+      s.retracted = t > s.pulse/2;
+    } else if (s.pulse && freezeActive > 0) {
+      // 冻结时保持当前状态
+    } else if (s.linkedButton !== undefined && s.linkedButton >= 0) {
+      s.retracted = level.buttons[s.linkedButton].active;
+    }
+  }
+}
+function checkKeys() {
+  for (const k of (level.keys||[])) {
+    if (k.taken) continue;
+    if (rectsOverlap(player,k)) {
+      k.taken = true;
+      for (const l of (level.locks||[])) l.open = true;
+      for (let i=0;i<20;i++) {
+        particles.push({x:k.x+12,y:k.y+12,vx:(Math.random()-0.5)*7,vy:(Math.random()-0.5)*7,
+          life:1,color:'#fbbf24',size:Math.random()*3+2});
+      }
+      screenShake=5; sfx(880, 0.15, 'triangle', 0.1);
+    }
+  }
+}
+function checkFragments() {
+  for (const f of (level.fragments || [])) {
+    if (f.taken) continue;
+    if (rectsOverlap(player, f)) {
+      f.taken = true;
+      fragmentsCollected++;
+      sfx(1320, 0.2, 'sine', 0.1);
+      for (let i = 0; i < 15; i++) {
+        particles.push({
+          x: f.x+f.w/2, y: f.y+f.h/2,
+          vx: (Math.random()-0.5)*6, vy: (Math.random()-0.5)*6,
+          life: 1, color: '#fbbf24', size: 3
+        });
+      }
+    }
+  }
+}
+function useFreeze() {
+  if (freezeLeft <= 0) return;
+  if (freezeActive > 0) return;
+  freezeLeft--;
+  freezeActive = 180;
+  sfx(220, 0.4, 'sine', 0.1);
+  setTimeout(() => sfx(330, 0.4, 'sine', 0.1), 100);
+  for (let i = 0; i < 40; i++) {
+    particles.push({
+      x: Math.random()*W, y: Math.random()*H,
+      vx: 0, vy: 0, life: 1, color: '#60a5fa', size: Math.random()*4+2
+    });
+  }
+}
+function checkBouncePads() {
+  for (const bp of (level.bouncePads||[])) {
+    if (rectsOverlap(player,bp) && player.vy>=0) {
+      player.vy = BOUNCE_POWER; player.onGround = false;
+      screenShake=5; sfx(500, 0.12, 'square', 0.06);
+      for (let i=0;i<14;i++) {
+        particles.push({x:player.x+player.w/2,y:bp.y+bp.h,vx:(Math.random()-0.5)*5,
+          vy:Math.random()*3+1,life:0.8,color:'#4ade80',size:Math.random()*2+2});
+      }
+    }
+  }
+}
+function checkPortals() {
+  if (player.teleportCooldown>0){player.teleportCooldown--;return;}
+  const ps = level.portals||[];
+  for (let i=0;i<ps.length;i++) {
+    if (rectsOverlap(player,ps[i])) {
+      const e = ps[ps[i].exit];
+      player.x = e.x+e.w/2-player.w/2;
+      player.y = e.y+e.h/2-player.h/2;
+      player.vx=0; player.vy=0; player.teleportCooldown=40;
+      screenShake=8; sfx(660, 0.2, 'sine', 0.08);
+      for (let j=0;j<24;j++) {
+        particles.push({x:player.x+player.w/2,y:player.y+player.h/2,
+          vx:(Math.random()-0.5)*9,vy:(Math.random()-0.5)*9,
+          life:1,color:'#c084fc',size:Math.random()*4+2});
+      }
+      return;
+    }
+  }
+}
+function checkSpikes() {
+  for (const s of (level.spikes||[])) {
+    if (s.retracted) continue;
+    // 箱子挡激光
+    let blocked = false;
+    for (const c of (level.crates||[])) {
+      if (rectsOverlap(c, s)) { blocked = true; break; }
+    }
+    if (blocked) continue;
+    if (rectsOverlap(player,s)) { rewind(); return; }
+  }
+}
+function checkGoal() {
+  if (rectsOverlap(player, level.goal)) {
+    state = 'clearing'; clearTimer = 40;
+    elapsedTime = (Date.now()-startTime)/1000;
+    const best = level.bestRewinds||1;
+    const totalFrag = (level.fragments||[]).length;
+    const fragComplete = totalFrag === 0 || fragmentsCollected === totalFrag;
+    let stars = 1;
+    if (rewindsUsed <= best && elapsedTime <= timeLimit*0.75 && fragComplete) stars = 3;
+    else if (rewindsUsed <= best+2 && elapsedTime <= timeLimit*0.9) stars = 2;
+    if (!levelStars[levelIndex] || levelStars[levelIndex] < stars) {
+      levelStars[levelIndex] = stars;
+      try { localStorage.setItem('timeRewindStars', JSON.stringify(levelStars)); } catch(e) {}
+    }
+    if (levelIndex+1 >= unlockedLevels && levelIndex+1 < LEVELS.length) {
+      unlockedLevels = levelIndex+2;
+      try { localStorage.setItem('timeRewindProgress', unlockedLevels); } catch(e) {}
+    }
+    sfx(880, 0.15, 'sine', 0.1);
+    setTimeout(()=>sfx(1320, 0.25, 'sine', 0.1), 120);
+    if (stars === 3) spawnFireworks();
+  }
+}
+function spawnFireworks() {
+  const colors = ['#4ade80','#22d3ee','#c084fc','#fbbf24','#f87171'];
+  for (let k=0;k<5;k++) {
+    const cx = 100+Math.random()*600, cy = 100+Math.random()*300;
+    const c = colors[k%colors.length];
+    for (let i=0;i<40;i++) {
+      const a = (Math.PI*2)*i/40 + Math.random()*0.2;
+      const s = 2+Math.random()*4;
+      fireworks.push({x:cx,y:cy,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,color:c,size:2+Math.random()*2});
+    }
+  }
+}
+function updateFireworks() {
+  for (let i=fireworks.length-1;i>=0;i--) {
+    const p = fireworks[i];
+    p.x+=p.vx; p.y+=p.vy;
+    p.vx*=0.96; p.vy*=0.96; p.vy+=0.15;
+    p.life-=0.015;
+    if (p.life<=0) fireworks.splice(i,1);
+  }
+}
+function rewind() {
+  if (rewindsUsed >= rewindLimit) {
+    warnFlash = 30; screenShake = 12;
+    sfx(120, 0.15, 'sawtooth', 0.08);
+    return;
+  }
+  if (history.length < 30) {
+    player.x=level.spawn.x; player.y=level.spawn.y;
+    player.vx=0; player.vy=0;
+    history=[]; rewindFlash=20; screenShake=8;
+    rewindsUsed++;
+    return;
+  }
+  const frames = history.slice(-REWIND_FRAMES);
+  const first = frames[0];
+  const newGhost = {frames, index:0, x:first.x, y:first.y, w:player.w, h:player.h,
+    facing:first.facing, glitched:false, life:GHOST_LIFE};
+
+  if (ghosts.length >= ghostLimit) {
+    ghosts.shift();
+    ghostSwapFlash = 20;
+  }
+  ghosts.push(newGhost);
+
+  player.x=first.x; player.y=first.y;
+  player.vx=0; player.vy=0; player.onGround=false;
+  history=[]; rewindFlash=20; screenShake=10; rewindsUsed++;
+  sfx(440, 0.15, 'sine', 0.08);
+
+  for (let i=0;i<32;i++) {
+    particles.push({x:player.x+player.w/2,y:player.y+player.h/2,
+      vx:(Math.random()-0.5)*9,vy:(Math.random()-0.5)*9,
+      life:1,color:'#60a5fa',size:Math.random()*4+2});
+  }
+}
+function updateParticles() {
+  for (let i=particles.length-1;i>=0;i--) {
+    const p = particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.vx*=0.95; p.vy*=0.95; p.life-=0.02;
+    if (p.life<=0) particles.splice(i,1);
+  }
+}
+function loadLevel(i) {
+  levelIndex = i;
+  level = JSON.parse(JSON.stringify(LEVELS[i]));
+  player.x=level.spawn.x; player.y=level.spawn.y;
+  player.vx=0; player.vy=0; player.onGround=false; player.facing=1;
+  player.trail=[]; player.teleportCooldown=0;
+  history=[]; ghosts=[]; particles=[]; fireworks=[];
+  rewindFlash=0; screenShake=0; warnFlash=0; ghostSwapFlash=0;
+  state='playing'; clearTimer=0; jumpHeld=false;
+  startTime=Date.now(); elapsedTime=0; rewindsUsed=0;
+  timeLimit = level.timeLimit || 45;
+  timeLeft = timeLimit;
+  ghostLimit = level.ghostLimit || 3;
+  rewindLimit = level.rewindLimit || 5;
+  fragmentsCollected = 0;
+  freezeLeft = level.freezeCount || 1;
+  freezeActive = 0;
+  if (autoNextTimer) { clearInterval(autoNextTimer); autoNextTimer=null; }
+  document.getElementById('hint').textContent = level.hint || '';
+  document.getElementById('levelText').textContent = `第 ${i+1} 关 / 20`;
+  document.getElementById('btnPause').style.display = 'flex';
+  updateHudDots();
+}
+function updateHudDots() {
+  const gd = document.getElementById('ghostDots');
+  gd.innerHTML = '';
+  for (let i=0;i<ghostLimit;i++) {
+    const d = document.createElement('span');
+    d.className = 'dot' + (i<ghosts.length ? ' on-blue' : '');
+    gd.appendChild(d);
+  }
+  const rd = document.getElementById('rewindDots');
+  rd.innerHTML = '';
+  for (let i=0;i<rewindLimit;i++) {
+    const d = document.createElement('span');
+    let cls = 'dot';
+    if (i < rewindsUsed) cls += (rewindsUsed >= rewindLimit ? ' on-red' : ' on-amber');
+    rd.appendChild(d);
+  }
+}
+function update() {
+  if (state !== 'playing' && state !== 'clearing') return;
+  if (state === 'playing') {
+    elapsedTime = (Date.now()-startTime)/1000;
+    timeLeft = Math.max(0, timeLimit - elapsedTime);
+    if (timeLeft <= 0) {
+      sfx(180, 0.4, 'sawtooth', 0.1);
+      for (let k = 0; k < 30; k++) {
+        particles.push({
+          x: player.x+player.w/2, y: player.y+player.h/2,
+          vx: (Math.random()-0.5)*12, vy: (Math.random()-0.5)*12,
+          life: 1, color: '#ef4444', size: 3
+        });
+      }
+      loadLevel(levelIndex);
+      return;
+    }
+    if (freezeActive > 0) freezeActive--;
+    updateMovingPlatforms();
+    if (freezeActive <= 0) updatePatrollers();
+    carryPlayerOnPlatforms();
+
+    player.vx = 0;
+    if (keys['ArrowLeft']||keys['a']||keys['A']) { player.vx=-MOVE_SPEED; player.facing=-1; }
+    if (keys['ArrowRight']||keys['d']||keys['D']) { player.vx=MOVE_SPEED; player.facing=1; }
+    const jk = keys['ArrowUp']||keys['w']||keys['W']||keys[' '];
+    if (jk && !jumpHeld && player.onGround) {
+      player.vy = JUMP_POWER; player.onGround = false;
+      sfx(600, 0.06, 'square', 0.04);
+    }
+    jumpHeld = jk;
+
+    moveAndCollide();
+    pushCrates();
+    updateCrates();
+    if (player.y > H+100) rewind();
+
+    player.trail.push({x:player.x,y:player.y,life:1});
+    if (player.trail.length>12) player.trail.shift();
+    for (const t of player.trail) t.life -= 0.1;
+
+    checkKeys(); checkFragments(); checkBouncePads(); checkPortals();
+    recordHistory(); updateGhosts(); updateButtons();
+    checkSpikes(); checkPatrollers(); checkGoal();
+  }
+  if (rewindFlash>0) rewindFlash--;
+  if (screenShake>0) screenShake *= 0.85;
+  if (warnFlash>0) warnFlash--;
+  if (ghostSwapFlash>0) ghostSwapFlash--;
+  updateParticles(); updateFireworks();
+
+  if (state === 'clearing') {
+    clearTimer--;
+    if (clearTimer <= 0) {
+      state = 'gameclear';
+      document.getElementById('btnPause').style.display = 'none';
+      if (levelIndex < LEVELS.length-1) {
+        document.getElementById('gameClear').classList.remove('hidden');
+        document.getElementById('clearTimeText').innerHTML =
+          `用 时 <b>${elapsedTime.toFixed(2)}</b> 秒　回溯 <b>${rewindsUsed}</b> 次　碎片 <b>${fragmentsCollected}/${(level.fragments||[]).length}</b>`;
+        const stars = levelStars[levelIndex] || 1;
+        document.getElementById('clearStars').innerHTML =
+          '★'.repeat(stars) + '<span class="off">' + '★'.repeat(3-stars) + '</span>';
+        document.getElementById('btnNextLevel').style.display = 'block';
+        document.getElementById('autoHint').style.display = 'block';
+        let cd = 3;
+        document.getElementById('autoHint').textContent = `${cd} 秒后自动进入下一关...`;
+        autoNextTimer = setInterval(() => {
+          cd--;
+          if (cd <= 0) { clearInterval(autoNextTimer); autoNextTimer=null; nextLevel(); }
+          else document.getElementById('autoHint').textContent = `${cd} 秒后自动进入下一关...`;
+        }, 1000);
+      } else {
+        let ts = 0;
+        for (let k=0;k<LEVELS.length;k++) ts += (levelStars[k]||0);
+        document.getElementById('allClearSub').textContent =
+          `你掌握了时间的奥秘　总星数 ${ts} / ${LEVELS.length*3}`;
+        document.getElementById('allClear').classList.remove('hidden');
+      }
+    }
+  }
+}
+function nextLevel() {
+  if (autoNextTimer) { clearInterval(autoNextTimer); autoNextTimer=null; }
+  document.getElementById('gameClear').classList.add('hidden');
+  if (levelIndex+1 < LEVELS.length) loadLevel(levelIndex+1);
+}
+function drawSpikes(s) {
+  if (s.retracted) {
+    ctx.save(); ctx.shadowColor='#ef4444'; ctx.shadowBlur=10;
+    ctx.fillStyle='rgba(239,68,68,0.45)';
+    for (let x=s.x+8;x<s.x+s.w-4;x+=18) {
+      ctx.beginPath(); ctx.arc(x,s.y+s.h-4,3,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore(); return;
+  }
+  const t = Date.now()/1000;
+  const bgG = ctx.createLinearGradient(s.x,s.y,s.x,s.y+s.h);
+  bgG.addColorStop(0,'rgba(239,68,68,0)');
+  bgG.addColorStop(0.5,'rgba(239,68,68,0.10)');
+  bgG.addColorStop(1,'rgba(239,68,68,0.28)');
+  ctx.fillStyle=bgG; ctx.fillRect(s.x,s.y,s.w,s.h);
+  const bc = Math.max(2,Math.floor(s.w/22)), gap = s.w/bc, bw = 3;
+  ctx.save(); ctx.shadowColor='#ef4444'; ctx.shadowBlur=18;
+  for (let i=0;i<bc;i++) {
+    const bx = s.x+i*gap+gap/2-bw/2;
+    const g2 = ctx.createLinearGradient(bx,s.y,bx+bw,s.y);
+    g2.addColorStop(0,'#7f1d1d'); g2.addColorStop(0.5,'#ef4444'); g2.addColorStop(1,'#7f1d1d');
+    ctx.fillStyle=g2; ctx.fillRect(bx,s.y,bw,s.h);
+    ctx.fillStyle='rgba(255,220,220,0.95)'; ctx.fillRect(bx+bw/2-0.5,s.y,1,s.h);
+  }
+  ctx.restore();
+  ctx.save(); ctx.shadowColor='#ef4444'; ctx.shadowBlur=22;
+  const tg = ctx.createLinearGradient(s.x,s.y-10,s.x,s.y);
+  tg.addColorStop(0,'#450a0a'); tg.addColorStop(1,'#7f1d1d');
+  ctx.fillStyle=tg; ctx.fillRect(s.x-4,s.y-10,s.w+8,10);
+  ctx.fillStyle='#fca5a5'; ctx.fillRect(s.x,s.y-6,s.w,2);
+  ctx.restore();
+  ctx.save(); ctx.shadowColor='#ef4444'; ctx.shadowBlur=18;
+  ctx.fillStyle='rgba(239,68,68,0.65)'; ctx.fillRect(s.x,s.y+s.h-3,s.w,3);
+  ctx.restore();
+  const py = s.y+s.h-((t*220)%s.h);
+  ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=22;
+  ctx.fillStyle='rgba(255,255,255,0.9)';
+  for (let i=0;i<bc;i++) {
+    const bx = s.x+i*gap+gap/2;
+    ctx.beginPath(); ctx.arc(bx,py,2,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+  // 脉冲激光指示器
+  if (s.pulse) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(251,191,36,0.7)';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'center';
+    const cyc = s.pulse;
+    const t2 = (Date.now()/16.67 + (s.phase||0)) % cyc;
+    const remaining = s.retracted ? (cyc/2 - t2 + cyc/2) : (cyc - t2);
+    const secs = Math.max(0, Math.ceil(remaining / 60 * 10) / 10);
+    ctx.fillText(`⚡${secs.toFixed(1)}s`, s.x + s.w/2, s.y - 14);
+    ctx.restore();
+  }
+}
+function draw() {
+  ctx.save();
+  if (screenShake>0.5) ctx.translate((Math.random()-0.5)*screenShake,(Math.random()-0.5)*screenShake);
+  const bg = ctx.createLinearGradient(0,0,W,H);
+  bg.addColorStop(0,'#0a0e1a'); bg.addColorStop(0.5,'#131629'); bg.addColorStop(1,'#0d1428');
+  ctx.fillStyle=bg; ctx.fillRect(-20,-20,W+40,H+40);
+  bgOffset += 0.004;
+  for (const a of bgAurora) {
+    a.phase += a.speed*0.02;
+    const ax = a.x+Math.sin(bgOffset*1.3+a.phase)*80;
+    const ay = a.y+Math.cos(bgOffset*1.1+a.phase)*60;
+    const rg = ctx.createRadialGradient(ax,ay,0,ax,ay,a.r);
+    rg.addColorStop(0,`hsla(${a.hue},80%,60%,0.055)`);
+    rg.addColorStop(1,`hsla(${a.hue},80%,60%,0)`);
+    ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+  }
+  for (const s of bgStars) {
+    s.y += s.speed;
+    if (s.y>H){s.y=0;s.x=Math.random()*W;}
+    s.phase += 0.02;
+    ctx.globalAlpha = s.alpha*(0.55+0.45*Math.sin(s.phase));
+    ctx.fillStyle='#cbd5e1';
+    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  if (!level) { ctx.restore(); return; }
+
+  // 平台
+  for (const p of level.platforms) {
+    ctx.save(); ctx.shadowColor='rgba(96,165,250,0.35)'; ctx.shadowBlur=18;
+    const pg = ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
+    pg.addColorStop(0,'#3b5998'); pg.addColorStop(0.5,'#2a4266'); pg.addColorStop(1,'#1e2e47');
+    ctx.fillStyle=pg; roundRect(p.x,p.y,p.w,p.h,6); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle='rgba(148,197,255,0.4)'; ctx.fillRect(p.x+4,p.y+1,p.w-8,2);
+    ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.fillRect(p.x+4,p.y+p.h-2,p.w-8,2);
+  }
+  if (level.wallPlatforms) for (const wp of level.wallPlatforms) {
+    ctx.save(); ctx.shadowColor='rgba(148,163,184,0.5)'; ctx.shadowBlur=15;
+    const wg = ctx.createLinearGradient(wp.x,wp.y,wp.x+wp.w,wp.y);
+    wg.addColorStop(0,'#1e293b'); wg.addColorStop(0.5,'#475569'); wg.addColorStop(1,'#1e293b');
+    ctx.fillStyle=wg; ctx.fillRect(wp.x,wp.y,wp.w,wp.h);
+    ctx.restore();
+    ctx.fillStyle='rgba(203,213,225,0.2)';
+    for (let y=wp.y+10;y<wp.y+wp.h-5;y+=20) ctx.fillRect(wp.x+4,y,wp.w-8,2);
+  }
+  if (level.movingPlatforms) {
+    const t = Date.now()/1000;
+    for (const mp of level.movingPlatforms) {
+      ctx.save(); ctx.shadowColor='#22d3ee'; ctx.shadowBlur=22;
+      const mg = ctx.createLinearGradient(mp.x,mp.y,mp.x,mp.y+mp.h);
+      mg.addColorStop(0,'#22d3ee'); mg.addColorStop(1,'#0891b2');
+      ctx.fillStyle=mg; roundRect(mp.x,mp.y,mp.w,mp.h,4); ctx.fill();
+      ctx.restore();
+      const fx = mp.x+((t*100)%mp.w);
+      const fg = ctx.createLinearGradient(fx-20,0,fx+20,0);
+      fg.addColorStop(0,'rgba(255,255,255,0)');
+      fg.addColorStop(0.5,'rgba(255,255,255,0.5)');
+      fg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=fg; ctx.fillRect(mp.x,mp.y+2,mp.w,2);
+      ctx.fillStyle='rgba(207,250,254,0.7)'; ctx.fillRect(mp.x+4,mp.y,mp.w-8,1.5);
+    }
+  }
+  if (level.bouncePads) {
+    const t = Date.now()/1000;
+    for (const bp of level.bouncePads) {
+      ctx.save(); ctx.shadowColor='#4ade80'; ctx.shadowBlur=18;
+      ctx.fillStyle='#16a34a';
+      roundRect(bp.x,bp.y+6,bp.w,bp.h-6,3); ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle='rgba(74,222,128,0.85)'; ctx.lineWidth=2;
+      for (let x=bp.x+6;x<bp.x+bp.w-2;x+=8) {
+        ctx.beginPath(); ctx.moveTo(x,bp.y+6); ctx.lineTo(x+4,bp.y); ctx.lineTo(x+8,bp.y+6); ctx.stroke();
+      }
+      const pulse = 0.5+0.5*Math.sin(t*4);
+      ctx.fillStyle = `rgba(134,239,172,${0.7+pulse*0.3})`;
+      ctx.fillRect(bp.x+2,bp.y,bp.w-4,2);
+    }
+  }
+  if (level.portals) for (let i=0;i<level.portals.length;i++) {
+    const p = level.portals[i];
+    const t = Date.now()/1000+i*1.7;
+    ctx.save(); ctx.shadowColor='#c084fc'; ctx.shadowBlur=25+Math.sin(t*3)*10;
+    const pg = ctx.createRadialGradient(p.x+p.w/2,p.y+p.h/2,4,p.x+p.w/2,p.y+p.h/2,p.h/2);
+    pg.addColorStop(0,'#f3e8ff'); pg.addColorStop(0.4,'#c084fc'); pg.addColorStop(1,'#7e22ce');
+    ctx.fillStyle=pg;
+    ctx.beginPath();
+    ctx.ellipse(p.x+p.w/2,p.y+p.h/2,p.w/2,p.h/2,0,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    ctx.save(); ctx.strokeStyle='rgba(243,232,255,0.7)'; ctx.lineWidth=2;
+    for (let k=0;k<3;k++) {
+      const rot = t*2+k*(Math.PI*2/3), rx = Math.cos(rot)*3;
+      ctx.beginPath();
+      ctx.ellipse(p.x+p.w/2+rx,p.y+p.h/2,p.w/3,p.h/3,0,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+  // 碎片
+  for (const f of (level.fragments || [])) {
+    if (f.taken) continue;
+    const t = Date.now() / 1000;
+    const bob = Math.sin(t * 4 + f.x) * 3;
+    const rot = t * 2;
+    ctx.save();
+    ctx.translate(f.x + f.w/2, f.y + f.h/2 + bob);
+    ctx.rotate(rot);
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 25;
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.moveTo(0, -10);
+    ctx.lineTo(8, 0);
+    ctx.lineTo(0, 10);
+    ctx.lineTo(-8, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath();
+    ctx.moveTo(0, -5);
+    ctx.lineTo(3, 0);
+    ctx.lineTo(0, 5);
+    ctx.lineTo(-3, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  // 箱子
+  for (const c of (level.crates || [])) {
+    ctx.save();
+    ctx.shadowColor = '#8b5a2b';
+    ctx.shadowBlur = 15;
+    const cg = ctx.createLinearGradient(c.x, c.y, c.x, c.y + c.h);
+    cg.addColorStop(0, '#a16207');
+    cg.addColorStop(0.5, '#854d0e');
+    cg.addColorStop(1, '#713f12');
+    ctx.fillStyle = cg;
+    roundRect(c.x, c.y, c.w, c.h, 4);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(c.x + 3, c.y + 3, c.w - 6, c.h - 6);
+    ctx.beginPath();
+    ctx.moveTo(c.x + 3, c.y + 3);
+    ctx.lineTo(c.x + c.w - 3, c.y + c.h - 3);
+    ctx.moveTo(c.x + c.w - 3, c.y + 3);
+    ctx.lineTo(c.x + 3, c.y + c.h - 3);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    ctx.fillRect(c.x + 4, c.y + 1, c.w - 8, 2);
+  }
+  // 钥匙
+  if (level.keys) for (const k of level.keys) {
+    if (k.taken) continue;
+    const t = Date.now()/1000, bob = Math.sin(t*3)*3, rot = Math.sin(t*2)*0.15;
+    ctx.save();
+    ctx.translate(k.x+12,k.y+12+bob); ctx.rotate(rot);
+    ctx.shadowColor='#fbbf24'; ctx.shadowBlur=22; ctx.fillStyle='#fbbf24';
+    ctx.beginPath(); ctx.arc(-4,0,6,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(-2,-2,16,4); ctx.fillRect(8,2,3,4); ctx.fillRect(11,6,3,3);
+    ctx.restore();
+    ctx.fillStyle='rgba(255,255,255,0.7)';
+    ctx.beginPath(); ctx.arc(k.x+7,k.y+6+bob,2,0,Math.PI*2); ctx.fill();
+  }
+  if (level.locks) for (const l of level.locks) {
+    if (l.open) {
+      ctx.save(); ctx.globalAlpha=0.18; ctx.strokeStyle='#fbbf24';
+      ctx.setLineDash([4,6]); ctx.lineWidth=2; ctx.strokeRect(l.x,l.y,l.w,l.h); ctx.restore();
+    } else {
+      ctx.save(); ctx.shadowColor='#fbbf24'; ctx.shadowBlur=18;
+      const lg = ctx.createLinearGradient(l.x,l.y,l.x+l.w,l.y);
+      lg.addColorStop(0,'#78350f'); lg.addColorStop(0.5,'#b45309'); lg.addColorStop(1,'#78350f');
+      ctx.fillStyle=lg; ctx.fillRect(l.x,l.y,l.w,l.h); ctx.restore();
+      ctx.fillStyle='rgba(251,191,36,0.6)';
+      for (let y=l.y+20;y<l.y+l.h-10;y+=30) {
+        ctx.fillRect(l.x+4,y,l.w-8,3); ctx.fillRect(l.x+4,y+4,l.w-8,1);
+      }
+      const cx = l.x+l.w/2, cy = l.y+l.h/2;
+      ctx.save(); ctx.shadowColor='#fbbf24'; ctx.shadowBlur=14;
+      ctx.strokeStyle='#fde68a'; ctx.lineWidth=2;
+      ctx.strokeRect(cx-7,cy-3,14,12);
+      ctx.beginPath(); ctx.arc(cx,cy-5,5,Math.PI,0); ctx.stroke();
+      ctx.fillStyle='#fde68a';
+      ctx.beginPath(); ctx.arc(cx,cy+3,2,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+  for (const s of (level.spikes||[])) drawSpikes(s);
+  for (const p of (level.patrollers||[])) {
+    const t = Date.now()/1000;
+    ctx.save(); ctx.shadowColor='#ef4444'; ctx.shadowBlur=25;
+    const pg = ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
+    pg.addColorStop(0,'#f87171'); pg.addColorStop(0.5,'#dc2626'); pg.addColorStop(1,'#7f1d1d');
+    ctx.fillStyle=pg; roundRect(p.x,p.y,p.w,p.h,8); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle='rgba(255,200,200,0.5)'; ctx.fillRect(p.x+4,p.y+2,p.w-8,2);
+    ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=8;
+    ctx.fillStyle='#fff';
+    const blink = Math.sin(t*4+p.x) > 0.7 ? 0 : 1;
+    if (blink) { ctx.fillRect(p.x+6,p.y+10,4,4); ctx.fillRect(p.x+18,p.y+10,4,4); }
+    ctx.restore();
+    ctx.fillStyle='#fff'; ctx.fillRect(p.x+8,p.y+24,14,2);
+    for (let i=0;i<3;i++) ctx.fillRect(p.x+9+i*4,p.y+26,2,3);
+    if (Math.random()<0.5) {
+      particles.push({x:p.x+Math.random()*p.w,y:p.y+p.h,
+        vx:(Math.random()-0.5)*1.5,vy:Math.random()*1.5,life:0.5,color:'#ef4444',size:2});
+    }
+  }
+  for (const b of (level.buttons||[])) {
+    if (b.active) {
+      const pulse = 0.5+0.5*Math.sin(Date.now()/150);
+      ctx.save(); ctx.shadowColor='#fbbf24'; ctx.shadowBlur=22+pulse*10;
+      ctx.fillStyle='#fbbf24'; roundRect(b.x,b.y,b.w,b.h,4); ctx.fill(); ctx.restore();
+      ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fillRect(b.x+4,b.y+1,b.w-8,1.5);
+      if (Math.random()<0.4) {
+        particles.push({x:b.x+Math.random()*b.w,y:b.y,vx:(Math.random()-0.5)*2,
+          vy:-Math.random()*2,life:0.6,color:'#fbbf24',size:2});
+      }
+    } else {
+      const bg = ctx.createLinearGradient(b.x,b.y,b.x,b.y+b.h);
+      bg.addColorStop(0,'#64748b'); bg.addColorStop(1,'#334155');
+      ctx.fillStyle=bg; roundRect(b.x,b.y,b.w,b.h,4); ctx.fill();
+      ctx.fillStyle='rgba(203,213,225,0.4)'; ctx.fillRect(b.x+4,b.y+1,b.w-8,1.5);
+    }
+  }
+  for (const d of (level.doors||[])) {
+    if (d.open) {
+      ctx.save(); ctx.globalAlpha=0.28; ctx.strokeStyle='#60a5fa';
+      ctx.setLineDash([4,6]); ctx.lineWidth=2; ctx.strokeRect(d.x,d.y,d.w,d.h); ctx.restore();
+      ctx.save(); ctx.shadowColor='#60a5fa'; ctx.shadowBlur=14;
+      ctx.fillStyle='rgba(96,165,250,0.4)';
+      ctx.fillRect(d.x-3,d.y-5,d.w+6,5); ctx.fillRect(d.x-3,d.y+d.h,d.w+6,5); ctx.restore();
+    } else {
+      const t = Date.now()/1000;
+      const bgG = ctx.createLinearGradient(d.x,d.y,d.x+d.w,d.y+d.h);
+      bgG.addColorStop(0,'rgba(30,64,175,0.7)');
+      bgG.addColorStop(0.5,'rgba(59,130,246,0.9)');
+      bgG.addColorStop(1,'rgba(30,64,175,0.7)');
+      ctx.save(); ctx.shadowColor='#60a5fa'; ctx.shadowBlur=22;
+      ctx.fillStyle=bgG; ctx.fillRect(d.x,d.y,d.w,d.h); ctx.restore();
+      ctx.fillStyle='rgba(219,234,254,0.7)'; ctx.fillRect(d.x+d.w/2-1,d.y,2,d.h);
+      ctx.strokeStyle='rgba(147,197,253,0.15)'; ctx.lineWidth=1;
+      for (let y=d.y+20;y<d.y+d.h-10;y+=30) {
+        ctx.beginPath(); ctx.moveTo(d.x+2,y); ctx.lineTo(d.x+d.w-2,y); ctx.stroke();
+      }
+      const scanY = d.y+((t*90)%(d.h+40))-20;
+      ctx.save(); ctx.shadowColor='#fff'; ctx.shadowBlur=18;
+      ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.fillRect(d.x,scanY,d.w,2); ctx.restore();
+      ctx.save(); ctx.shadowColor='#60a5fa'; ctx.shadowBlur=15;
+      ctx.fillStyle='#1e40af';
+      ctx.fillRect(d.x-4,d.y-10,d.w+8,10);
+      ctx.fillRect(d.x-4,d.y+d.h,d.w+8,10);
+      ctx.fillStyle='#93c5fd';
+      ctx.fillRect(d.x-1,d.y-7,d.w+2,2);
+      ctx.fillRect(d.x-1,d.y+d.h+5,d.w+2,2);
+      ctx.restore();
+      const cx = d.x+d.w/2, cy = d.y+d.h/2;
+      ctx.save(); ctx.shadowColor='#93c5fd'; ctx.shadowBlur=14;
+      ctx.strokeStyle='#dbeafe'; ctx.lineWidth=2;
+      ctx.strokeRect(cx-6,cy-2,12,10);
+      ctx.beginPath(); ctx.arc(cx,cy-4,4,Math.PI,0); ctx.stroke();
+      ctx.restore();
+    }
+  }
+  const g = level.goal, pulse = Math.sin(Date.now()/300)*0.5+0.5;
+  ctx.save(); ctx.shadowColor='#c084fc'; ctx.shadowBlur=30+pulse*20;
+  const gg = ctx.createRadialGradient(g.x+g.w/2,g.y+g.h/2,4,g.x+g.w/2,g.y+g.h/2,g.w/2);
+  gg.addColorStop(0,`rgba(233,213,255,${0.6+pulse*0.3})`);
+  gg.addColorStop(0.6,`rgba(168,85,247,${0.55+pulse*0.3})`);
+  gg.addColorStop(1,`rgba(126,34,206,${0.4+pulse*0.2})`);
+  ctx.fillStyle=gg; roundRect(g.x,g.y,g.w,g.h,8); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle='#c084fc'; ctx.lineWidth=2;
+  ctx.strokeRect(g.x+2,g.y+2,g.w-4,g.h-4);
+  if (Math.random()<0.4) {
+    particles.push({x:g.x+Math.random()*g.w,y:g.y+Math.random()*g.h,
+      vx:(Math.random()-0.5)*1,vy:-Math.random()*1.8,life:0.8,color:'#c084fc',size:2});
+  }
+  for (const p of particles) {
+    ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  for (const gh of ghosts) {
+    if (gh.life !== undefined && gh.life < 200 && Math.sin(Date.now()/80) > 0) continue;
+    const glitch = gh.glitched ? (Math.random()-0.5)*6 : 0;
+    ctx.globalAlpha = 0.12; ctx.fillStyle='#60a5fa';
+    roundRect(gh.x-6+glitch,gh.y+4,gh.w,gh.h,6); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.globalAlpha = 0.45+Math.sin(Date.now()/220)*0.12;
+    ctx.shadowColor='#60a5fa'; ctx.shadowBlur=18;
+    const g2 = ctx.createLinearGradient(gh.x,gh.y,gh.x,gh.y+gh.h);
+    g2.addColorStop(0,'#93c5fd'); g2.addColorStop(1,'#3b82f6');
+    ctx.fillStyle=g2; roundRect(gh.x+glitch,gh.y,gh.w,gh.h,6); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    const ex = gh.facing>0?gh.x+13:gh.x+6;
+    ctx.fillRect(ex+glitch,gh.y+8,4,4);
+  }
+  for (let i=0;i<player.trail.length;i++) {
+    const t = player.trail[i];
+    if (t.life<=0) continue;
+    ctx.globalAlpha = t.life*0.22; ctx.fillStyle='#4ade80';
+    roundRect(t.x,t.y,player.w,player.h,6); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.save(); ctx.shadowColor='#4ade80'; ctx.shadowBlur=20;
+  const pg2 = ctx.createLinearGradient(player.x,player.y,player.x,player.y+player.h);
+  pg2.addColorStop(0,'#86efac'); pg2.addColorStop(0.5,'#4ade80'); pg2.addColorStop(1,'#16a34a');
+  ctx.fillStyle=pg2; roundRect(player.x,player.y,player.w,player.h,6); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.fillRect(player.x+4,player.y+1,player.w-8,2);
+  ctx.fillStyle='#052e16';
+  const px = player.facing>0?player.x+13:player.x+6;
+  ctx.fillRect(px,player.y+9,4,4);
+  ctx.fillRect(player.facing>0?player.x+8:player.x+6,player.y+20,8,3);
+  if (rewindFlash>0) {
+    const a = (rewindFlash/20)*0.55;
+    ctx.fillStyle = `rgba(96,165,250,${a})`;
+    ctx.fillRect(-20,-20,W+40,H+40);
+    for (let i=0;i<6;i++) {
+      const y = Math.random()*H;
+      ctx.fillStyle = `rgba(147,197,253,${a*1.5})`;
+      ctx.fillRect(0,y,W,Math.random()*4+1);
+    }
+  }
+  if (warnFlash>0) {
+    const a = (warnFlash/30)*0.5;
+    ctx.fillStyle = `rgba(239,68,68,${a})`;
+    ctx.fillRect(-20,-20,W+40,H+40);
+  }
+  if (ghostSwapFlash>0) {
+    const a = (ghostSwapFlash/20)*0.3;
+    ctx.fillStyle = `rgba(96,165,250,${a})`;
+    ctx.fillRect(0,0,W,60);
+  }
+  // 时间冻结特效
+  if (freezeActive > 0) {
+    const a = Math.min(1, freezeActive / 30) * 0.15;
+    ctx.fillStyle = `rgba(96, 165, 250, ${a})`;
+    ctx.fillRect(-20, -20, W + 40, H + 40);
+    const borderAlpha = Math.min(1, freezeActive / 30) * 0.6;
+    ctx.strokeStyle = `rgba(147, 197, 253, ${borderAlpha})`;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, W - 4, H - 4);
+    // 雪花效果
+    for (let i = 0; i < 8; i++) {
+      const sx = (i * 100 + Date.now()/20) % W;
+      const sy = (i * 80 + Date.now()/15) % H;
+      ctx.fillStyle = `rgba(200, 230, 255, ${0.4 * (freezeActive/180)})`;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 3, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+  for (const p of fireworks) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  // HUD
+  const tt = document.getElementById('timeText');
+  tt.textContent = `${timeLeft.toFixed(1)}s / ${timeLimit}s`;
+  tt.style.color = timeLeft < 5 ? '#fca5a5' : (timeLeft < 10 ? '#fbbf24' : '#22d3ee');
+  document.getElementById('fragmentText').textContent = 
+    `💎 ${fragmentsCollected}/${(level.fragments||[]).length}`;
+  const ft = document.getElementById('freezeText');
+  ft.textContent = `❄ ${freezeLeft}`;
+  if (freezeLeft <= 0) ft.classList.add('off'); else ft.classList.remove('off');
+  updateHudDots();
+}
+let lastTime = 0, acc = 0;
+const STEP = 1000/60;
+function loop(t) {
+  if (!lastTime) lastTime = t;
+  let dt = t-lastTime;
+  lastTime = t;
+  if (dt>100) dt=100;
+  acc += dt;
+  while (acc>=STEP) { update(); acc-=STEP; }
+  draw();
+  requestAnimationFrame(loop);
+}
+document.addEventListener('keydown', e => {
+  keys[e.key] = true;
+  if (e.repeat) return;
+  if (e.key==='r'||e.key==='R') { if (state==='playing') rewind(); }
+  if (e.key==='f'||e.key==='F') { if (state==='playing') useFreeze(); }
+  if (e.key==='Escape') {
+    if (state==='playing') pauseGame();
+    else if (state==='paused') resumeGame();
+  }
+  if ([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+});
+document.addEventListener('keyup', e => { keys[e.key] = false; });
+function bindTouch(id, key) {
+  const el = document.getElementById(id);
+  const d = e => { e.preventDefault(); keys[key]=true; };
+  const u = e => { e.preventDefault(); keys[key]=false; };
+  el.addEventListener('touchstart', d, {passive:false});
+  el.addEventListener('touchend', u, {passive:false});
+  el.addEventListener('touchcancel', u, {passive:false});
+  el.addEventListener('mousedown', d);
+  el.addEventListener('mouseup', u);
+  el.addEventListener('mouseleave', u);
+}
+bindTouch('btnLeft','ArrowLeft'); bindTouch('btnRight','ArrowRight'); bindTouch('btnJump',' ');
+document.getElementById('btnRewind').addEventListener('click', () => {
+  if (state==='playing') rewind();
+});
+document.getElementById('btnFreeze').addEventListener('click', () => {
+  if (state==='playing') useFreeze();
+});
+function hideAll() {
+  ['menu','tutorial','levelSelect','pauseMenu','gameClear','allClear','exitScreen']
+    .forEach(id => document.getElementById(id).classList.add('hidden'));
+}
+function showMenu() {
+  hideAll(); document.getElementById('menu').classList.remove('hidden');
+  document.getElementById('btnPause').style.display='none'; state='menu';
+}
+function showTutorial() {
+  hideAll(); document.getElementById('tutorial').classList.remove('hidden'); state='tutorial';
+}
+function showLevelSelect() {
+  hideAll(); document.getElementById('levelSelect').classList.remove('hidden');
+  renderLevelGrid(); state='levelselect';
+}
+function pauseGame() { if (state!=='playing') return; state='paused'; document.getElementById('pauseMenu').classList.remove('hidden'); }
+function resumeGame() { if (state!=='paused') return; state='playing'; document.getElementById('pauseMenu').classList.add('hidden'); }
+function renderLevelGrid() {
+  const grid = document.getElementById('levelGrid');
+  grid.innerHTML = '';
+  for (let i=0;i<LEVELS.length;i++) {
+    const btn = document.createElement('button');
+    btn.className = 'level-btn ' + (i+1<=unlockedLevels ? 'unlocked' : 'locked');
+    const s = levelStars[i]||0;
+    const ss = s>0 ? '★'.repeat(s) : '';
+    btn.innerHTML = `${i+1}<span>${i+1<=unlockedLevels?'已解锁':'锁定'}</span>` +
+                    (ss ? `<div class="stars">${ss}</div>` : '');
+    if (i+1<=unlockedLevels) btn.onclick = () => { hideAll(); loadLevel(i); };
+    grid.appendChild(btn);
+  }
+}
+document.getElementById('btnStart').onclick = () => { hideAll(); loadLevel(0); };
+document.getElementById('btnTutorial').onclick = showTutorial;
+document.getElementById('btnSelectLevel').onclick = showLevelSelect;
+document.getElementById('btnExit').onclick = () => {
+  hideAll(); document.getElementById('exitScreen').classList.remove('hidden'); state='exit';
+};
+document.getElementById('btnBackMenu').onclick = showMenu;
+document.getElementById('btnBackMenu2').onclick = showMenu;
+document.getElementById('btnBackMenu3').onclick = showMenu;
+document.getElementById('btnBackMenu4').onclick = () => {
+  if (autoNextTimer) { clearInterval(autoNextTimer); autoNextTimer=null; }
+  showMenu();
+};
+document.getElementById('btnBackMenu5').onclick = showMenu;
+document.getElementById('btnBackMenu6').onclick = showMenu;
+document.getElementById('btnResume').onclick = resumeGame;
+document.getElementById('btnRestart').onclick = () => {
+  document.getElementById('pauseMenu').classList.add('hidden'); loadLevel(levelIndex);
+};
+document.getElementById('btnPause').onclick = pauseGame;
+document.getElementById('btnNextLevel').onclick = nextLevel;
+document.getElementById('btnReplay').onclick = () => {
+  if (autoNextTimer) { clearInterval(autoNextTimer); autoNextTimer=null; }
+  document.getElementById('gameClear').classList.add('hidden'); loadLevel(levelIndex);
+};
+showMenu();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

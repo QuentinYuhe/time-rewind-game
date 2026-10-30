@@ -383,12 +383,12 @@ for (let i = 0; i < 4; i++) {
 
 /* ========================= 20 关 ========================= */
 const LEVELS = [
-  // 1
+  // 1 (碎片的 y 坐标调整到 420 左右，确保地面起跳能吃到)
   { spawn:{x:60,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
     buttons:[{x:280,y:532,w:80,h:8,active:false}],
     doors:[{x:500,y:200,w:24,h:340,open:false,linkedButton:0}],
     goal:{x:700,y:480,w:40,h:60},
-    fragments:[{x:200,y:400,w:20,h:20,taken:false},{x:450,y:200,w:20,h:20,taken:false},{x:680,y:380,w:20,h:20,taken:false}],
+    fragments:[{x:200,y:420,w:20,h:20,taken:false},{x:450,y:420,w:20,h:20,taken:false},{x:650,y:420,w:20,h:20,taken:false}],
     crates:[{x:240,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
     ghostLimit:3, rewindLimit:5, bestRewinds:1, timeLimit:35, freezeCount:1,
     hint:'把木箱推到按钮上，或踩按钮后回溯' },
@@ -400,7 +400,7 @@ const LEVELS = [
     buttons:[{x:100,y:532,w:60,h:8,active:false}],
     doors:[{x:620,y:200,w:24,h:340,open:false,linkedButton:0}],
     goal:{x:740,y:480,w:40,h:60},
-    fragments:[{x:150,y:380,w:20,h:20,taken:false},{x:400,y:380,w:20,h:20,taken:false},{x:700,y:380,w:20,h:20,taken:false}],
+    fragments:[{x:150,y:420,w:20,h:20,taken:false},{x:360,y:420,w:20,h:20,taken:false},{x:700,y:420,w:20,h:20,taken:false}],
     crates:[{x:130,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
     ghostLimit:3, rewindLimit:6, bestRewinds:1, timeLimit:40, freezeCount:1,
     hint:'箱子推上按钮，然后骑移动平台过坑' },
@@ -411,7 +411,7 @@ const LEVELS = [
     doors:[{x:260,y:200,w:24,h:340,open:false,linkedButton:0},
            {x:540,y:200,w:24,h:340,open:false,linkedButton:1}],
     goal:{x:720,y:480,w:40,h:60},
-    fragments:[{x:340,y:300,w:20,h:20,taken:false},{x:500,y:300,w:20,h:20,taken:false},{x:680,y:400,w:20,h:20,taken:false}],
+    fragments:[{x:180,y:420,w:20,h:20,taken:false},{x:450,y:420,w:20,h:20,taken:false},{x:660,y:420,w:20,h:20,taken:false}],
     crates:[{x:200,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
     ghostLimit:2, rewindLimit:4, bestRewinds:2, timeLimit:35, freezeCount:1,
     hint:'箱子或幽灵踩一个按钮，另一个用幽灵' },
@@ -423,7 +423,7 @@ const LEVELS = [
     buttons:[{x:460,y:372,w:60,h:8,active:false}],
     doors:[{x:660,y:200,w:24,h:340,open:false,linkedButton:0}],
     goal:{x:740,y:480,w:40,h:60},
-    fragments:[{x:300,y:300,w:20,h:20,taken:false},{x:470,y:300,w:20,h:20,taken:false},{x:680,y:300,w:20,h:20,taken:false}],
+    fragments:[{x:300,y:420,w:20,h:20,taken:false},{x:470,y:300,w:20,h:20,taken:false},{x:680,y:420,w:20,h:20,taken:false}],
     crates:[{x:480,y:348,w:32,h:32,vx:0,vy:0,onGround:false}],
     ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:32, freezeCount:1,
     hint:'弹跳板上高台，把箱子推上按钮' },
@@ -435,7 +435,7 @@ const LEVELS = [
     buttons:[{x:100,y:532,w:60,h:8,active:false}],
     doors:[{x:700,y:200,w:24,h:340,open:false,linkedButton:0}],
     goal:{x:760,y:480,w:40,h:60},
-    fragments:[{x:300,y:300,w:20,h:20,taken:false},{x:500,y:400,w:20,h:20,taken:false},{x:720,y:300,w:20,h:20,taken:false}],
+    fragments:[{x:300,y:420,w:20,h:20,taken:false},{x:500,y:420,w:20,h:20,taken:false},{x:730,y:420,w:20,h:20,taken:false}],
     ghostLimit:2, rewindLimit:3, bestRewinds:1, timeLimit:30, freezeCount:1,
     hint:'墙挡住去路，按下按钮回溯后从传送门过去' },
 
@@ -446,7 +446,7 @@ const LEVELS = [
     buttons:[{x:600,y:532,w:60,h:8,active:false}],
     doors:[{x:700,y:200,w:24,h:340,open:false,linkedButton:0}],
     goal:{x:760,y:480,w:40,h:60},
-    fragments:[{x:300,y:400,w:20,h:20,taken:false},{x:500,y:400,w:20,h:20,taken:false},{x:650,y:400,w:20,h:20,taken:false}],
+    fragments:[{x:320,y:420,w:20,h:20,taken:false},{x:520,y:420,w:20,h:20,taken:false},{x:660,y:420,w:20,h:20,taken:false}],
     crates:[{x:340,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
     ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:32, freezeCount:1,
     hint:'钥匙开锁，箱子或幽灵踩按钮开门' },
@@ -458,7 +458,7 @@ const LEVELS = [
     buttons:[{x:430,y:312,w:60,h:8,active:false}],
     doors:[{x:620,y:200,w:24,h:340,open:false,linkedButton:0}],
     goal:{x:720,y:480,w:40,h:60},
-    fragments:[{x:300,y:300,w:20,h:20,taken:false},{x:460,y:240,w:20,h:20,taken:false},{x:650,y:300,w:20,h:20,taken:false}],
+    fragments:[{x:280,y:420,w:20,h:20,taken:false},{x:450,y:240,w:20,h:20,taken:false},{x:660,y:420,w:20,h:20,taken:false}],
     crates:[{x:440,y:288,w:32,h:32,vx:0,vy:0,onGround:false}],
     ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:32, freezeCount:2,
     hint:'乘电梯上去推箱子到按钮上' },
@@ -470,7 +470,7 @@ const LEVELS = [
     buttons:[{x:100,y:532,w:60,h:8,active:false}],
     doors:[{x:620,y:200,w:24,h:340,open:false,linkedButton:0}],
     goal:{x:740,y:480,w:40,h:60},
-    fragments:[{x:350,y:400,w:20,h:20,taken:false},{x:500,y:300,w:20,h:20,taken:false},{x:700,y:400,w:20,h:20,taken:false}],
+    fragments:[{x:150,y:420,w:20,h:20,taken:false},{x:400,y:420,w:20,h:20,taken:false},{x:680,y:420,w:20,h:20,taken:false}],
     ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:32, freezeCount:2,
     hint:'脉冲激光会周期性开关，抓时机穿过' },
 
@@ -482,7 +482,7 @@ const LEVELS = [
     keys:[{x:100,y:500,w:24,h:24,taken:false}],
     locks:[{x:500,y:200,w:24,h:340,open:false}],
     goal:{x:740,y:480,w:40,h:60},
-    fragments:[{x:150,y:400,w:20,h:20,taken:false},{x:400,y:400,w:20,h:20,taken:false},{x:700,y:300,w:20,h:20,taken:false}],
+    fragments:[{x:150,y:420,w:20,h:20,taken:false},{x:380,y:420,w:20,h:20,taken:false},{x:680,y:420,w:20,h:20,taken:false}],
     ghostLimit:2, rewindLimit:4, bestRewinds:1, timeLimit:35, freezeCount:2,
     hint:'捡钥匙开锁，骑平台过坑，避开巡逻兵' },
 
@@ -496,12 +496,12 @@ const LEVELS = [
            {x:640,y:200,w:24,h:340,open:false,linkedButton:2}],
     spikes:[{x:460,y:320,w:60,h:220,linkedButton:1,retracted:false}],
     goal:{x:740,y:480,w:40,h:60},
-    fragments:[{x:300,y:400,w:20,h:20,taken:false},{x:500,y:400,w:20,h:20,taken:false},{x:700,y:400,w:20,h:20,taken:false}],
+    fragments:[{x:280,y:420,w:20,h:20,taken:false},{x:480,y:420,w:20,h:20,taken:false},{x:680,y:420,w:20,h:20,taken:false}],
     crates:[{x:600,y:508,w:32,h:32,vx:0,vy:0,onGround:false}],
     ghostLimit:3, rewindLimit:4, bestRewinds:3, timeLimit:38, freezeCount:2,
     hint:'三幽灵分别开门/关激光，箱子可帮忙' },
 
-  // 11（简化：无碎片/箱子，保留核心机制）
+  // 11
   { spawn:{x:30,y:480}, platforms:[{x:0,y:540,w:800,h:60}],
     patrollers:[{x:180,y:500,w:30,h:40,x1:180,y1:500,x2:300,y2:500,speed:0.014,t:0},
                 {x:400,y:500,w:30,h:40,x1:400,y1:500,x2:520,y2:500,speed:0.014,t:0.5}],
@@ -708,7 +708,6 @@ function moveAndCollide() {
 function pushCrates() {
   for (const c of (level.crates||[])) {
     if (!rectsOverlap(player,c)) continue;
-    // 玩家水平推进箱子
     if (player.vx > 0) {
       const test = {x:c.x+player.vx, y:c.y, w:c.w, h:c.h};
       let blocked = false;
@@ -746,7 +745,6 @@ function updateCrates() {
         else if (c.vy < 0) { c.y = c2.y + c2.h; c.vy = 0; }
       }
     }
-    // 玩家踩在箱子上
     if (player.onGround && Math.abs(player.y+player.h-c.y)<4 &&
         player.x+player.w>c.x+2 && player.x<c.x+c.w-2) {
       player.y = c.y - player.h;
@@ -824,7 +822,6 @@ function updateButtons() {
       const t = (Date.now()/16.67 + (s.phase||0)) % s.pulse;
       s.retracted = t > s.pulse/2;
     } else if (s.pulse && freezeActive > 0) {
-      // 冻结时保持当前状态
     } else if (s.linkedButton !== undefined && s.linkedButton >= 0) {
       s.retracted = level.buttons[s.linkedButton].active;
     }
@@ -909,7 +906,6 @@ function checkPortals() {
 function checkSpikes() {
   for (const s of (level.spikes||[])) {
     if (s.retracted) continue;
-    // 箱子挡激光
     let blocked = false;
     for (const c of (level.crates||[])) {
       if (rectsOverlap(c, s)) { blocked = true; break; }
@@ -1173,7 +1169,6 @@ function drawSpikes(s) {
     ctx.beginPath(); ctx.arc(bx,py,2,0,Math.PI*2); ctx.fill();
   }
   ctx.restore();
-  // 脉冲激光指示器
   if (s.pulse) {
     ctx.save();
     ctx.fillStyle = 'rgba(251,191,36,0.7)';
@@ -1214,7 +1209,6 @@ function draw() {
   ctx.globalAlpha = 1;
   if (!level) { ctx.restore(); return; }
 
-  // 平台
   for (const p of level.platforms) {
     ctx.save(); ctx.shadowColor='rgba(96,165,250,0.35)'; ctx.shadowBlur=18;
     const pg = ctx.createLinearGradient(p.x,p.y,p.x,p.y+p.h);
@@ -1284,7 +1278,6 @@ function draw() {
     }
     ctx.restore();
   }
-  // 碎片
   for (const f of (level.fragments || [])) {
     if (f.taken) continue;
     const t = Date.now() / 1000;
@@ -1313,7 +1306,6 @@ function draw() {
     ctx.fill();
     ctx.restore();
   }
-  // 箱子
   for (const c of (level.crates || [])) {
     ctx.save();
     ctx.shadowColor = '#8b5a2b';
@@ -1338,7 +1330,6 @@ function draw() {
     ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.fillRect(c.x + 4, c.y + 1, c.w - 8, 2);
   }
-  // 钥匙
   if (level.keys) for (const k of level.keys) {
     if (k.taken) continue;
     const t = Date.now()/1000, bob = Math.sin(t*3)*3, rot = Math.sin(t*2)*0.15;
@@ -1524,7 +1515,6 @@ function draw() {
     ctx.fillStyle = `rgba(96,165,250,${a})`;
     ctx.fillRect(0,0,W,60);
   }
-  // 时间冻结特效
   if (freezeActive > 0) {
     const a = Math.min(1, freezeActive / 30) * 0.15;
     ctx.fillStyle = `rgba(96, 165, 250, ${a})`;
@@ -1533,7 +1523,6 @@ function draw() {
     ctx.strokeStyle = `rgba(147, 197, 253, ${borderAlpha})`;
     ctx.lineWidth = 4;
     ctx.strokeRect(2, 2, W - 4, H - 4);
-    // 雪花效果
     for (let i = 0; i < 8; i++) {
       const sx = (i * 100 + Date.now()/20) % W;
       const sy = (i * 80 + Date.now()/15) % H;
@@ -1550,7 +1539,6 @@ function draw() {
   }
   ctx.globalAlpha = 1;
   ctx.restore();
-  // HUD
   const tt = document.getElementById('timeText');
   tt.textContent = `${timeLeft.toFixed(1)}s / ${timeLimit}s`;
   tt.style.color = timeLeft < 5 ? '#fca5a5' : (timeLeft < 10 ? '#fbbf24' : '#22d3ee');
